@@ -84,7 +84,7 @@ def load_model_and_scaler():
         st.error("❌ Model 'loan_default_model.tflite' tidak ditemukan.")
         st.stop()
 
-    interpreter = tf.lite.Interpreter(model_path="loan_default_model.tflite")
+    interpreter = tf.lite.Interpreter(model_path="loan_default.tflite")
     interpreter.allocate_tensors()
     return scaler, interpreter
 

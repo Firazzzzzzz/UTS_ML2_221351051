@@ -80,8 +80,8 @@ def load_model_and_scaler():
         st.error("❌ File scaler 'scaler.pkl' tidak ditemukan.")
         st.stop()
 
-    if not os.path.exists("loan_default_model.tflite"):
-        st.error("❌ Model 'loan_default_model.tflite' tidak ditemukan.")
+    if not os.path.exists("loan_default.tflite"):
+        st.error("❌ Model 'loan_default.tflite' tidak ditemukan.")
         st.stop()
 
     interpreter = tf.lite.Interpreter(model_path="loan_default.tflite")

@@ -78,4 +78,5 @@ def load_model_and_scaler():
     
     # Cek file scaler
     if not os.path.exists("loan_scaler.pkl"):
-        return None, None, "❌ File scaler 'loan_scaler.pkl'_
+        return None, None, "❌ File scaler 'loan_scaler.pkl' tidak ditemukan."
+

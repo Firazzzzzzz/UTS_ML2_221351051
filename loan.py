@@ -74,9 +74,67 @@ st.markdown("""
 # ==== Load Model ====
 @st.cache_resource
 def load_model_and_scaler():
-    st.write("🔄 Memuat model dan scaler...")
-    
-    # Cek file scaler
-    if not os.path.exists("loan_scaler.pkl"):
-        return None, None, "❌ File scaler 'loan_scaler.pkl' tidak ditemukan."
+    try:
+        scaler = joblib.load("scaler.pkl")
+    except FileNotFoundError:
+        st.error("❌ File scaler 'scaler.pkl' tidak ditemukan.")
+        st.stop()
 
+    if not os.path.exists("loan_default_model.tflite"):
+        st.error("❌ Model 'loan_default_model.tflite' tidak ditemukan.")
+        st.stop()
+
+    interpreter = tf.lite.Interpreter(model_path="loan_default_model.tflite")
+    interpreter.allocate_tensors()
+    return scaler, interpreter
+
+scaler, interpreter = load_model_and_scaler()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+
+# ==== Header ====
+st.markdown('<div class="header">📊 Prediksi Risiko Gagal Bayar Pinjaman</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtext">Masukkan informasi peminjam untuk melihat kemungkinan gagal bayar berdasarkan model machine learning.</div>', unsafe_allow_html=True)
+
+# ==== Input Form ====
+with st.form("loan_form"):
+    st.markdown('<div class="form-box">', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        age = st.number_input("Usia Pemohon (tahun)", 18, 100, 30)
+        income = st.number_input("Pendapatan Bulanan (juta)", 0.0, 1000.0, 10.0)
+    with col2:
+        loan_amount = st.number_input("Jumlah Pinjaman (juta)", 0.0, 1000.0, 100.0)
+        loan_term = st.number_input("Durasi Pinjaman (bulan)", 6, 360, 60)
+
+    submitted = st.form_submit_button("Lakukan Prediksi")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ==== Output Prediction ====
+if submitted:
+    try:
+        input_data = np.array([[age, income, loan_amount, loan_term]])
+        input_scaled = scaler.transform(input_data).astype(np.float32)
+
+        interpreter.set_tensor(input_details[0]['index'], input_scaled)
+        interpreter.invoke()
+        prediction = interpreter.get_tensor(output_details[0]['index'])
+        probability = float(prediction[0][0])
+
+        st.markdown('<div class="result-box">', unsafe_allow_html=True)
+        if probability > 0.5:
+            st.markdown(
+                f"<p class='high-risk'>⚠️ Hasil Prediksi: <b>Risiko Tinggi</b> gagal bayar — <b>{probability:.2%}</b></p>",
+                unsafe_allow_html=True
+            )
+            st.progress(min(probability, 1.0))
+        else:
+            st.markdown(
+                f"<p class='low-risk'>✅ Hasil Prediksi: <b>Risiko Rendah</b> gagal bayar — <b>{probability:.2%}</b></p>",
+                unsafe_allow_html=True
+            )
+            st.progress(min(probability, 1.0))
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"❌ Terjadi kesalahan saat melakukan prediksi: {e}")
